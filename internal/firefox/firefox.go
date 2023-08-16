@@ -2,15 +2,12 @@ package firefox
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/zellyn/kooky"
 	"github.com/zellyn/kooky/internal/utils"
-
-	"github.com/bobesa/go-domain-util/domainutil"
 )
 
 func (s *CookieStore) ReadCookies(filters ...kooky.Filter) ([]*kooky.Cookie, error) {
@@ -44,19 +41,14 @@ func (s *CookieStore) ReadCookies(filters ...kooky.Filter) ([]*kooky.Cookie, err
 		}
 
 		// Domain
-		if baseDomain := row.ValueOrFallback(`baseDomain`, nil); baseDomain == nil {
-			if host, err := row.String(`host`); err != nil {
-				return err
-			} else {
-				cookie.Domain = domainutil.Domain(host)
-			}
-		} else {
-			// handle databases prior v78 ESR
-			var ok bool
-			cookie.Domain, ok = baseDomain.(string)
-			if !ok {
-				return fmt.Errorf("got unexpected value for baseDomain %v (type %[1]T)", baseDomain)
-			}
+		cookie.Domain, err = row.String(`host`)
+		if err != nil {
+			return err
+		}
+
+		// Trim off the leading '.' as per https://www.rfc-editor.org/rfc/rfc6265#section-5.2.3
+		if cookie.Domain[0] == '.' {
+			cookie.Domain = cookie.Domain[1:]
 		}
 
 		// Path
